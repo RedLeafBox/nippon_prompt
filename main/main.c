@@ -56,7 +56,7 @@ static void monitorTask( void * parameters )
            
         // return the semaphore
         xSemaphoreGive(asicSemaphore);
-        } else {
+    } else {
             // could not obtain semaphore, error
     }
 
