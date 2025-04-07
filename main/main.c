@@ -17,7 +17,7 @@ typedef enum  {
 } asicRegister;
 
 static const int MIN_POSITION = -2147483648; 
-static const int MAX_POSITION = 2147483648;
+static const int MAX_POSITION = 2147483647;
 static const int REN4_VAL = 0x00003838;
 
 static SemaphoreHandle_t asicSemaphore;
@@ -28,12 +28,12 @@ static void monitorTask( void * parameters );
 static void mainTask( void * parameters );
 
 // fake functions for reading and writing registers
-static void readRegister(int motorNumber, asicRegister reg, int val);
+static void readRegister(int motorNumber, asicRegister reg, int* val);
 static void writeRegister(int motorNumber, asicRegister reg, int val);
 
 /*-----------------------------------------------------------*/
 
-static void readRegister(int motorNumber, asicRegister reg, int val) {
+static void readRegister(int motorNumber, asicRegister reg, int* val) {
 }
 
 static void writeRegister(int motorNumber, asicRegister reg, int val) {
@@ -41,6 +41,11 @@ static void writeRegister(int motorNumber, asicRegister reg, int val) {
 
 /*-----------------------------------------------------------*/
 
+// Task for monitoring the postions of four motors to make sure they do not collide.
+//
+// Note:
+// The motors in this code are being treated as if they occupy a point on a scale, the code
+// should take into account the width of the motors but does not.
 static void monitorTask( void * parameters )
 {
     int positionMotor_1, positionMotor_2, positionMotor_3, positionMotor_4;
@@ -66,24 +71,24 @@ static void monitorTask( void * parameters )
         if(xSemaphoreTake(asicSemaphore, (TickType_t)1000 ) == pdTRUE ) {
 
             // get the current positions of the motors
-            readRegister(1, rmv, positionMotor_1);
-            readRegister(2, rmv, positionMotor_2);
-            readRegister(3, rmv, positionMotor_3);
-            readRegister(4, rmv, positionMotor_4);
+            readRegister(1, rmv, &positionMotor_1);
+            readRegister(2, rmv, &positionMotor_2);
+            readRegister(3, rmv, &positionMotor_3);
+            readRegister(4, rmv, &positionMotor_4);
 
             // set the limits for all four motors, the limit being halfway to the next motor over
             left = MIN_POSITION;
-            right = positionMotor_1 + (positionMotor_2 - positionMotor_1)/2;
+            right = positionMotor_1 + (positionMotor_2/2 - positionMotor_1/2);
             writeRegister(1, rcmp1, left);
             writeRegister(1, rcmp2, right);
 
             left = right;
-            right = positionMotor_2 + (positionMotor_3 - positionMotor_2)/2;
+            right = positionMotor_2 + (positionMotor_3/2 - positionMotor_2/2);
             writeRegister(2, rcmp1, left);
             writeRegister(2, rcmp2, right);
 
             left = right;
-            right = positionMotor_3 + (positionMotor_4 - positionMotor_3)/2;
+            right = positionMotor_3 + (positionMotor_4/2 - positionMotor_3/2);
             writeRegister(3, rcmp1, left);
             writeRegister(3, rcmp2, right);
 
